@@ -1,0 +1,38 @@
+### PUPPET MANAGED ###
+# This is a basic VCL configuration file for varnish.  See the vcl(7)
+# man page for details on VCL syntax and semantics.
+# 
+# Default backend definition.  Set this to point to your content
+# server.
+# 
+vcl 4.0;
+
+backend default {
+  .host = "127.0.0.1";
+  .port = "8080";
+}
+
+sub vcl_recv {
+ # Remove Google Analytics cookies
+  if (req.http.Cookie) {
+      set req.http.Cookie = regsuball(req.http.Cookie, "(^|;\s*)(__[a-z]+|has_js)=[^;]*", "");
+  }
+  # Remove the cookie when it's empty
+  if (req.http.Cookie == "") {
+      unset req.http.Cookie;
+  }
+}
+
+sub vcl_backend_response {
+
+  set beresp.do_esi = true;
+  if (bereq.url ~ "^/personalized") {
+    set beresp.uncacheable = true;
+    return(deliver);
+ }
+ if (bereq.url ~ "^/inc") {
+    set beresp.ttl = 30s;
+  }else{
+    set beresp.ttl = 120s;
+  }
+}
